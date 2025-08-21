@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cadastro de Manutenção</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Supabase JS -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --bg:#f6f7fb;--card:#ffffff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
+      --brand:#146835;--brand-2:#0d4a27;--hover:#f0fdf4;--thead:#146835;--thead-text:#fff;
+    }
+    body.dark{
+      --bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#9ca3af;--border:#374151;
+      --brand:#22c55e;--brand-2:#16a34a;--hover:#0b2b1d;--thead:#22c55e;--thead-text:#0b1a12;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:var(--bg);color:var(--text);
+      font: 16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      transition: background .25s,color .25s;
+    }
+    .header{
+      position:sticky;top:0;z-index:10;
+      display:flex;align-items:center;gap:16px;
+      padding:14px 20px;background:var(--card);border-bottom:1px solid var(--border);
+      box-shadow:0 2px 12px rgba(0,0,0,.05);
+    }
+    .header img{height:44px}
+    .header h1{margin:0;flex:1;text-align:center;font-weight:700;letter-spacing:-.3px;color:var(--brand)}
+    .toggle{border:2px solid var(--brand);background:transparent;color:var(--brand);
+      padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600}
+    .toggle:hover{background:var(--brand);color:#fff}
+
+    .container{max-width:1100px;margin:28px auto;padding:0 16px}
+
+    .card{
+      background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;
+      box-shadow:0 8px 28px rgba(0,0,0,.06);
+    }
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .grid-1{grid-template-columns:1fr}
+    label{font-weight:600;font-size:.9rem;color:var(--muted)}
+    input,textarea{
+      width:100%;margin-top:6px;padding:12px 12px;border:1.5px solid var(--border);border-radius:10px;
+      background:transparent;color:var(--text);outline:none;transition:border .2s, box-shadow .2s;
+    }
+    input:focus,textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in oklab, var(--brand) 25%, transparent)}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+    .btn{
+      border:none;border-radius:10px;padding:12px 16px;cursor:pointer;font-weight:700;
+      background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff
+    }
+    .btn.secondary{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+    .btn.secondary:hover{background:color-mix(in oklab, var(--brand) 8%, transparent)}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+
+    .table-wrap{margin-top:22px}
+    table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    thead th{background:var(--thead);color:var(--thead-text);text-transform:uppercase;letter-spacing:.6px;font-size:.78rem;padding:12px}
+    tbody td{padding:12px;border-top:1px solid var(--border)}
+    tbody tr:hover td{background:var(--hover)}
+    .empty{padding:18px;text-align:center;color:var(--muted)}
+
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--border);font-size:.82rem}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="LOGO-USA-REFORMADA.png" alt="Logo">
+    <h1>Cadastro de Manutenção de Computadores</h1>
+    <button class="toggle" id="toggleTheme">🌙 Modo escuro</button>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <form id="formManutencao">
+        <div class="grid">
+          <div>
+            <label for="tecnico">Técnico</label>
+            <input id="tecnico" required placeholder="Ex.: Allison" />
+          </div>
+          <div>
+            <label for="setor">Setor</label>
+            <input id="setor" required placeholder="Ex.: TI" />
+          </div>
+          <div>
+            <label for="maquina">Nome da Máquina</label>
+            <input id="maquina" required placeholder="Ex.: PC-TI-01" />
+          </div>
+          <div class="grid-1">
+            <label for="data">Data da Manutenção</label>
+            <input id="data" type="date" required />
+          </div>
+        </div>
+
+        <div class="grid grid-1" style="margin-top:10px">
+          <div>
+            <label for="descricao">Manutenção Realizada</label>
+            <textarea id="descricao" rows="3" required placeholder="Descreva o que foi feito..."></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" type="submit" id="btnSalvar">Cadastrar Manutenção</button>
+          <button class="btn secondary" type="button" id="btnExportar">Exportar CSV</button>
+          <button class="btn secondary" type="button" id="btnAtualizar">Atualizar Lista</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="table-wrap card" style="margin-top:18px">
+      <table id="tabela">
+        <thead>
+          <tr>
+            <th style="width:18%">Técnico</th>
+            <th style="width:16%">Setor</th>
+            <th style="width:18%">Máquina</th>
+            <th>Manutenção</th>
+            <th style="width:14%">Data</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr class="empty"><td colspan="5">Sem registros ainda.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // ====== 1) CONFIGURE AQUI SEU SUPABASE ======
+    const SUPABASE_URL = "https://fqikdqjtixndioaptryu.supabase.co";          // <- troque
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxaWtkcWp0aXhuZGlvYXB0cnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3ODM5MzYsImV4cCI6MjA3MTM1OTkzNn0.BkwPEto7XGFIJirLH2Ei4SwExAFFG8F0lIceYWdwfLc";                     // <- troque
+    const TABLE = "manutencoes";
+
+    // ====== 2) CLIENT ======
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ====== 3) UI ======
+    const form = document.getElementById('formManutencao');
+    const tbody = document.getElementById('tbody');
+    const btnExportar = document.getElementById('btnExportar');
+    const btnAtualizar = document.getElementById('btnAtualizar');
+    const btnSalvar = document.getElementById('btnSalvar');
+    const tgl = document.getElementById('toggleTheme');
+
+    // Tema
+    (function initTheme(){
+      const saved = localStorage.getItem('theme') || 'light';
+      if(saved==='dark') document.body.classList.add('dark');
+      tgl.textContent = document.body.classList.contains('dark') ? '☀️ Modo claro' : '🌙 Modo escuro';
+    })();
+    tgl.onclick = () => {
+      document.body.classList.toggle('dark');
+      const dark = document.body.classList.contains('dark');
+      localStorage.setItem('theme', dark?'dark':'light');
+      tgl.textContent = dark ? '☀️ Modo claro' : '🌙 Modo escuro';
+    };
+
+    // Helpers
+    function fmtDate(iso){
+      if(!iso) return '';
+      // aceita "YYYY-MM-DD" do input ou ISO completo do banco
+      const d = iso.length===10 ? new Date(iso+'T00:00:00') : new Date(iso);
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+    function rowHTML(m){
+      return `<tr>
+        <td>${m.tecnico||''}</td>
+        <td><span class="pill">${m.setor||''}</span></td>
+        <td>${m.maquina||''}</td>
+        <td>${m.descricao||''}</td>
+        <td>${fmtDate(m.data)}</td>
+      </tr>`;
+    }
+    function setRows(rows){
+      tbody.innerHTML = rows.length ? rows.map(rowHTML).join('') : `<tr class="empty"><td colspan="5">Sem registros ainda.</td></tr>`;
+    }
+
+    // ====== 4) CARREGAR LISTA ======
+    async function carregar(){
+      btnAtualizar.disabled = true;
+      const { data, error } = await sb.from(TABLE).select('*').order('id', { ascending:false });
+      btnAtualizar.disabled = false;
+      if(error){ alert('Erro ao carregar: '+error.message); return; }
+      setRows(data);
+    }
+
+    // ====== 5) INSERIR ======
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const novo = {
+        tecnico: document.getElementById('tecnico').value.trim(),
+        setor: document.getElementById('setor').value.trim(),
+        maquina: document.getElementById('maquina').value.trim(),
+        descricao: document.getElementById('descricao').value.trim(),
+        data: document.getElementById('data').value  // yyyy-mm-dd
+      };
+      if(!novo.tecnico || !novo.setor || !novo.maquina || !novo.descricao || !novo.data){
+        alert('Preencha todos os campos.'); return;
+      }
+      btnSalvar.disabled = true;
+      const { error } = await sb.from(TABLE).insert([novo]);
+      btnSalvar.disabled = false;
+      if(error){ alert('Erro ao salvar: '+error.message); return; }
+      form.reset();
+      await carregar(); // recarrega após inserir
+    });
+
+    // ====== 6) EXPORTAR CSV (abre no Excel) ======
+    btnExportar.addEventListener('click', async ()=>{
+      const { data, error } = await sb.from(TABLE).select('*').order('id', { ascending:true });
+      if(error){ alert('Erro ao exportar: '+error.message); return; }
+      const header = ['tecnico','setor','maquina','descricao','data'];
+      const linhas = [header.join(';')].concat(
+        data.map(r => [
+          r.tecnico, r.setor, r.maquina,
+          (r.descricao||'').replaceAll('\n',' ').replaceAll(';',','),  // evita quebrar CSV
+          r.data
+        ].map(v => `"${(v??'').toString().replaceAll('"','""')}"`).join(';'))
+      );
+      const blob = new Blob([linhas.join('\n')], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href:url, download:'manutencoes.csv' });
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // ====== 7) ATUALIZAR MANUAL ======
+    btnAtualizar.addEventListener('click', carregar);
+
+    // ====== 8) TEMPO REAL: novos registros aparecem em outros PCs ======
+    sb
+      .channel('public:'+TABLE)
+      .on('postgres_changes', { event:'INSERT', schema:'public', table: TABLE }, (payload)=>{
+        // Se já existe linha "Sem registros", limpa
+        if(tbody.querySelector('.empty')) tbody.innerHTML = '';
+        // Prepend: novo em cima
+        tbody.insertAdjacentHTML('afterbegin', rowHTML(payload.new));
+      })
+      .subscribe();
+
+    // Inicial
+    carregar();
+  </script>
+</body>
+</html>
